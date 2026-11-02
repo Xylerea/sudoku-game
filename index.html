@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#762b40">
+    <script>
+        try {
+            const preferences = JSON.parse(localStorage.getItem('sudoku-game-settings') || '{}');
+            document.documentElement.dataset.theme = preferences?.darkMode === true ? 'dark' : 'light';
+        } catch { document.documentElement.dataset.theme = 'light'; }
+    </script>
+    <title>Sudoku — A little room to think</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css">
+    <script src="languages.js" defer></script>
+    <script src="sudoku-engine.js" defer></script>
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+    <header class="header">
+        <a class="logo" href="#" aria-label="Sudoku home" data-i18n-aria-label="sudokuHome">
+            <span class="logo-icon" aria-hidden="true">▦</span> SUDOKU
+        </a>
+
+        <button id="menu-toggle" data-i18n-aria-label="toggleNavigation" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navigation-dialog" aria-haspopup="dialog"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><nav id="main-nav" aria-label="Main navigation">
+            <a href="#" id="shared-home" data-i18n="home">Home</a>
+            <a href="#how-to" data-i18n="howToPlay">How to play</a>
+            <a class="nav-play" href="#features" data-i18n="about">About</a>
+            <button class="nav-settings" id="landing-settings" type="button"
+                aria-label="Settings" data-i18n-aria-label="settings">
+                <svg class="settings-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#settings-gear-icon"></use></svg>
+            </button>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero" aria-labelledby="hero-title">
+            <div class="hero-copy">
+                <p class="eyebrow" data-i18n="heroEyebrow">A CLASSIC PUZZLE GAME</p>
+                <h1 id="hero-title" data-i18n="heroTitle">SUDOKU</h1>
+                <p class="intro" data-i18n="heroIntro">A classic puzzle game to challenge your mind.</p>
+                <div class="hero-highlights" aria-label="Sudoku benefits">
+                    <div class="hero-highlight">
+                        <span class="highlight-icon" aria-hidden="true">🧠</span>
+                        <span data-i18n="trainLogic">Train<br>your logic</span>
+                    </div>
+                    <div class="hero-highlight">
+                        <span class="highlight-icon bars-icon" aria-hidden="true">
+                            <i></i><i></i><i></i>
+                        </span>
+                        <span data-i18n="improveFocus">Improve<br>focus</span>
+                    </div>
+                    <div class="hero-highlight">
+                        <span class="highlight-icon heart-icon" aria-hidden="true">♥</span>
+                        <span data-i18n="funRelaxing">Fun and<br>relaxing</span>
+                    </div>
+                </div>
+                <div class="landing-actions">
+                <button class="button" id="continue-button" type="button" hidden data-i18n="continuePlaying">Continue Playing</button>
+                <button class="button" id="start-button" type="button">
+                    <span id="start-label" data-i18n="playNow">Play Now</span>
+                    <span aria-hidden="true">›</span>
+                </button>
+                </div>
+                <p class="small-note" data-i18n="smallNote">No downloads. No sign-ups. Just you and the puzzle.</p>
+            </div>
+
+            <div class="landing-preview" id="landing-preview" aria-hidden="true">
+                <div class="landing-board" id="landing-board"></div>
+            </div>
+
+            <div class="game-area" id="game">
+                <div class="game-topbar">
+                    <a class="logo" href="#" id="game-home" aria-label="Return to Sudoku home"
+                        data-i18n-aria-label="sudokuHome">
+                        <span class="logo-icon" aria-hidden="true">▦</span> SUDOKU
+                    </a>
+                    <nav class="game-nav" aria-label="Game navigation">
+                        <button class="game-nav-home" id="home-button" type="button" data-i18n="home">Home</button>
+                        <a href="#how-to" id="game-how-link" data-i18n="howToPlay">How to play</a>
+                        <a href="#features" id="game-about-link" data-i18n="about">About</a>
+                        <button class="settings-button" id="settings-button" type="button"
+                            aria-label="Open game settings" data-i18n-aria-label="openSettings">
+                            <svg class="settings-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#settings-gear-icon"></use></svg>
+                        </button>
+                    </nav>
+                </div>
+                <div class="puzzle-card">
+                    <div class="play-controls">
+                        <span id="difficulty-label" class="sr-only" data-i18n="difficulty">Difficulty</span>
+                        <span id="game-difficulty" class="game-difficulty" aria-labelledby="difficulty-label">Easy</span>
+                        <div class="timer-controls">
+                        <span class="timer-display" aria-label="Time played" data-i18n-aria-label="timePlayed">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="2" />
+                                <path d="M12 9v4l2.5 1.5M9 2h6M18 5l1.5-1.5" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" />
+                            </svg>
+                            <span id="game-timer" aria-label="Time played">00:00</span>
+                        </span>
+                        <button id="pause-button" class="pause-button" type="button" aria-label="Pause game"
+                            data-i18n-aria-label="pauseGame">
+                            <span id="pause-icon" aria-hidden="true">Ⅱ</span>
+                        </button>
+                        </div>
+                        <span class="mistakes-display" aria-live="polite">
+                            <span aria-hidden="true">⚠</span>
+                            <span id="mistakes-label" data-i18n="mistakes">Mistakes</span>:
+                            <strong id="mistake-count">0</strong>/3
+                        </span>
+                    </div>
+                    <div class="game-layout" id="game-layout">
+                        <div class="board" id="board" role="group" aria-label="Sudoku puzzle" data-i18n-aria-label="sudokuPuzzle"></div>
+                        <aside class="game-sidebar">
+                            <div class="game-tools" aria-label="Puzzle tools" data-i18n-aria-label="puzzleTools" hidden>
+                                <button id="undo-button" class="tool-button" type="button" disabled>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 4 10l5 5M4 10h9a6 6 0 0 1 0 12"/></svg><span data-i18n="undo">Undo</span>
+                                </button>
+                                <button id="erase-button" class="tool-button" type="button">
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m14 3 7 7-10 10H7l-5-5L14 3ZM7 10l7 7M11 20h10"/></svg><span data-i18n="erase">Erase</span>
+                                </button>
+                                <button id="hint-button" class="tool-button" type="button">
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M9 21h6M8 14a6 6 0 1 1 8 0l-1 2H9l-1-2Z"/></svg><span data-i18n="hint">Hint</span>
+                                </button>
+                            </div>
+                            <section class="game-tips" aria-labelledby="tips-title">
+                                <h2 id="tips-title"><span aria-hidden="true">💡</span> <span data-i18n="gameTips">Game Tips</span></h2>
+                                <p data-i18n="gameTipText">Each row, column, and 3×3 box must contain every number from 1 to 9 exactly once.</p>
+                            </section>
+                        </aside>
+                    </div>
+                    <div class="number-pad" id="number-pad" aria-label="Enter a number" data-i18n-aria-label="enterNumber" hidden>
+                        <button type="button" data-value="1" aria-label="Enter 1">1</button>
+                        <button type="button" data-value="2" aria-label="Enter 2">2</button>
+                        <button type="button" data-value="3" aria-label="Enter 3">3</button>
+                        <button type="button" data-value="4" aria-label="Enter 4">4</button>
+                        <button type="button" data-value="5" aria-label="Enter 5">5</button>
+                        <button type="button" data-value="6" aria-label="Enter 6">6</button>
+                        <button type="button" data-value="7" aria-label="Enter 7">7</button>
+                        <button type="button" data-value="8" aria-label="Enter 8">8</button>
+                        <button type="button" data-value="9" aria-label="Enter 9">9</button>
+                    </div>
+                    <div class="puzzle-footer">
+                        <span class="status-icon" aria-hidden="true">ⓘ</span>
+                        <span id="game-status" role="status" aria-live="polite" data-i18n="oneSquare">
+                            One square at a time.
+                        </span>
+                        <button id="reset-button" class="text-button" type="button" hidden>
+                            <span data-i18n="reset">Reset</span>
+                        </button>
+                    </div>
+                </div>
+                <p class="game-caption" data-i18n="gameCaption">A small ritual for a sharper day.</p>
+            </div>
+        </section>
+
+        <section class="difficulty-screen" id="difficulty-screen" aria-labelledby="difficulty-title">
+            <div class="difficulty-window">
+                <header class="difficulty-header">
+                    <a class="difficulty-brand" href="#" id="difficulty-brand"
+                        aria-label="Sudoku home" data-i18n-aria-label="sudokuHome">
+                        <span class="difficulty-brand-icon" aria-hidden="true">▦</span>
+                        <span>SUDOKU</span>
+                    </a>
+                    <nav class="difficulty-nav" aria-label="Difficulty navigation">
+                        <button class="difficulty-nav-home active" id="difficulty-nav-home" type="button"
+                            data-i18n="home">Home</button>
+                        <a href="#how-to" id="difficulty-how-link" data-i18n="howToPlay">How to Play</a>
+                        <a href="#features" id="difficulty-about-link" data-i18n="about">About</a>
+                        <button class="difficulty-settings" id="difficulty-settings" type="button"
+                            aria-label="Open game settings" data-i18n-aria-label="openSettings"><svg class="settings-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#settings-gear-icon"></use></svg></button>
+                    </nav>
+                </header>
+                <div class="difficulty-content">
+            <p class="eyebrow" data-i18n="difficultyEyebrow">CHOOSE YOUR CHALLENGE</p>
+            <h1 id="difficulty-title" data-i18n="chooseDifficulty">Choose Difficulty</h1>
+            <p class="difficulty-intro" data-i18n="difficultyIntro">Pick a level that suits your skill.</p>
+            <div class="difficulty-options">
+                <article class="difficulty-option">
+                    <span class="difficulty-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <h2 data-i18n="easy">Easy</h2>
+                    <p data-i18n="easyDescription">A great start for beginners.</p>
+                    <button class="level-button" type="button" data-level="easy">
+                        <span data-i18n="selectLevel">Select</span>
+                    </button>
+                </article>
+                <article class="difficulty-option">
+                    <span class="difficulty-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <h2 data-i18n="medium">Medium</h2>
+                    <p data-i18n="mediumDescription">A bit more challenging.</p>
+                    <button class="level-button" type="button" data-level="medium">
+                        <span data-i18n="selectLevel">Select</span>
+                    </button>
+                </article>
+                <article class="difficulty-option">
+                    <span class="difficulty-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <h2 data-i18n="hard">Hard</h2>
+                    <p data-i18n="hardDescription">Test your skills!</p>
+                    <button class="level-button" type="button" data-level="hard">
+                        <span data-i18n="selectLevel">Select</span>
+                    </button>
+                </article>
+            </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features" id="features" aria-label="Why Sudoku" data-i18n-aria-label="whySudoku">
+            <article>
+                <span class="feature-number">01 /</span>
+                <h2 data-i18n="featureFocusTitle">Find your focus</h2>
+                <p data-i18n="featureFocusText">Give your attention somewhere quiet to land.</p>
+            </article>
+            <article>
+                <span class="feature-number">02 /</span>
+                <h2 data-i18n="featureSimpleTitle">Keep it simple</h2>
+                <p data-i18n="featureSimpleText">A clean board, clear numbers, and space to think.</p>
+            </article>
+            <article>
+                <span class="feature-number">03 /</span>
+                <h2 data-i18n="featureProgressTitle">Make a little progress</h2>
+                <p data-i18n="featureProgressText">Enjoy the satisfaction of every square that clicks.</p>
+            </article>
+        </section>
+
+        <section class="how-to" id="how-to">
+            <h2 data-i18n="howTitle">Simple rules. Satisfying little wins.</h2>
+            <p data-i18n="howText">
+                Fill each row, column, and 3×3 box with the numbers 1–9,
+                without repeating a number. Select an empty square and type
+                a number to begin.
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <a class="logo" href="#">SUDOKU</a>
+        <p data-i18n="footerText">A little less noise. A little more clarity.</p>
+    </footer>
+    <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-title"
+        aria-modal="true" role="dialog">
+        <div class="settings-heading">
+            <h2 id="settings-title" data-i18n="settings">Settings</h2>
+            <button class="settings-close" id="settings-close" type="button"
+                aria-label="Close settings" data-i18n-aria-label="closeSettings">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <path d="m6 6 12 12M18 6 6 18" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+            </button>
+        </div>
+        <div class="settings-content">
+            <section class="settings-section" aria-labelledby="settings-language-title">
+                <h3 id="settings-language-title" data-i18n="languageSection">Language</h3>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <p id="language-description" data-i18n="languageDescription">Choose the language used throughout the game.</p>
+                    </div>
+                    <details class="language-picker" id="language-picker"><summary id="language-current" aria-describedby="language-description">English</summary><div class="language-options"><input type="search" id="language-search" autocomplete="off" data-i18n-aria-label="searchLanguages" aria-label="Search languages"><select id="language-select" class="language-select" size="6" data-i18n-aria-label="language" aria-label="Language"></select><p id="language-empty" data-i18n="noLanguages" hidden>No languages found</p></div></details>
+                </div>
+            </section>
+
+            <section class="settings-section" aria-labelledby="settings-display-title">
+                <h3 id="settings-display-title" data-i18n="displaySection">Display &amp; Accessibility</h3>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <label for="pref-dark-mode" data-i18n="darkMode">Dark Mode</label>
+                        <p data-i18n="darkModeDescription">Use a dark background for comfortable viewing.</p>
+                    </div>
+                    <input class="setting-toggle" id="pref-dark-mode" type="checkbox" role="switch"
+                        data-setting="darkMode" aria-label="Dark Mode" data-i18n-aria-label="darkMode">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <label for="pref-high-contrast" data-i18n="highContrast">High Contrast</label>
+                        <p data-i18n="highContrastDescription">Make numbers and grid lines easier to distinguish.</p>
+                    </div>
+                    <input class="setting-toggle" id="pref-high-contrast" type="checkbox"
+                        data-setting="highContrast" aria-label="High Contrast"
+                        data-i18n-aria-label="highContrast">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <label for="pref-large-text" data-i18n="largerText">Larger Text</label>
+                        <p data-i18n="largerTextDescription">Increase text and Sudoku number sizes.</p>
+                    </div>
+                    <input class="setting-toggle" id="pref-large-text" type="checkbox"
+                        data-setting="largerText" aria-label="Larger Text"
+                        data-i18n-aria-label="largerText">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <label for="pref-large-buttons" data-i18n="largerButtons">Larger Buttons</label>
+                        <p data-i18n="largerButtonsDescription">Make game controls easier to tap.</p>
+                    </div>
+                    <input class="setting-toggle" id="pref-large-buttons" type="checkbox"
+                        data-setting="largerButtons" aria-label="Larger Buttons"
+                        data-i18n-aria-label="largerButtons">
+                </div>
+            </section>
+
+            <section class="settings-section" aria-labelledby="settings-sound-title">
+                <h3 id="settings-sound-title" data-i18n="soundSection">Sound &amp; Motion</h3>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <label for="pref-sound" data-i18n="soundEffects">Sound Effects</label>
+                        <p data-i18n="soundEffectsDescription">Play soft sounds for moves and game events.</p>
+                    </div>
+                    <input class="setting-toggle" id="pref-sound" type="checkbox"
+                        data-setting="soundEffects" aria-label="Sound Effects"
+                        data-i18n-aria-label="soundEffects">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <label for="pref-reduced-motion" data-i18n="reducedMotion">Reduced Motion</label>
+                        <p data-i18n="reducedMotionDescription">Reduce animation and movement effects.</p>
+                    </div>
+                    <input class="setting-toggle" id="pref-reduced-motion" type="checkbox"
+                        data-setting="reducedMotion" aria-label="Reduced Motion"
+                        data-i18n-aria-label="reducedMotion">
+                </div>
+            </section>
+
+            <section class="settings-section" aria-labelledby="settings-game-title">
+                <h3 id="settings-game-title" data-i18n="gamePreferences">Game Preferences</h3>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <label for="pref-show-timer" data-i18n="showTimer">Show Timer</label>
+                        <p data-i18n="showTimerDescription">Display elapsed time while you play.</p>
+                    </div>
+                    <input class="setting-toggle" id="pref-show-timer" type="checkbox"
+                        data-setting="showTimer" aria-label="Show Timer"
+                        data-i18n-aria-label="showTimer">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-copy">
+                        <label for="pref-mistake-limit" data-i18n="mistakeLimit">Enable Mistake Limit</label>
+                        <p data-i18n="mistakeLimitDescription">End the game after three mistakes.</p>
+                    </div>
+                    <input class="setting-toggle" id="pref-mistake-limit" type="checkbox"
+                        data-setting="mistakeLimit" aria-label="Enable Mistake Limit"
+                        data-i18n-aria-label="mistakeLimit">
+                </div>
+            </section>
+        </div>
+        <div class="settings-footer">
+            <span id="settings-save-status" role="status" aria-live="polite"></span>
+            <button class="settings-done" id="settings-done" type="button" data-i18n="done">Done</button>
+        </div>
+    </dialog>
+    <dialog id="navigation-dialog" class="navigation-dialog" aria-labelledby="navigation-title">
+        <div class="navigation-heading">
+            <h2 id="navigation-title">SUDOKU</h2>
+            <button id="navigation-close" type="button" data-i18n-aria-label="closeNavigation" aria-label="Close navigation"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </div>
+        <nav aria-label="Navigation">
+            <a href="#" data-destination="home"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/></svg><span data-i18n="home">Home</span></a>
+            <a href="#how-to" data-destination="how-to"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-2H4V4Zm9 3a3 3 0 0 1 3×3h5v15h-5a4 4 0 0 0-3 2"/></svg><span data-i18n="howToPlay">How to Play</span></a>
+            <a href="#features" data-destination="features"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v6M12 7h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z"/></svg><span data-i18n="about">About</span></a>
+            <button id="navigation-settings" type="button"><svg class="settings-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#settings-gear-icon"></use></svg><span data-i18n="settings">Settings</span></button>
+        </nav>
+    </dialog>
+    <!-- Lucide settings icon (ISC): https://lucide.dev/license -->
+    <svg id="settings-icon-definitions" xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs><symbol id="settings-gear-icon" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></symbol></defs>
+    </svg>
+</body>
+
+</html>
