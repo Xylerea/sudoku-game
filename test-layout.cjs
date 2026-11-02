@@ -34,6 +34,87 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    for(let n=0;n<100;n++){const ready=await evaluate('document.readyState === "complete" && !!document.querySelector(".preview-cell")');if(ready)break;await wait(50);}
    await evaluate('Promise.race([document.fonts.ready,new Promise(resolve=>setTimeout(resolve,2000))])');
   }
+  if(process.argv.includes('--input-only')) {
+   const press=async(key,options={})=>{
+    const params={key,...(/^[1-9]$/.test(key)?{text:key}:{}),...options};
+    await send('Input.dispatchKeyEvent',{type:'keyDown',...params},sid);
+    await send('Input.dispatchKeyEvent',{type:'keyUp',key,...options},sid);
+   };
+   const tap=async(selector,mobile)=>{
+    const point=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.scrollIntoView({block:'nearest',behavior:'instant'});const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+    if(mobile){
+     await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]},sid);
+     await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]},sid);
+    }else{
+     await send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point},sid);
+     await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point},sid);
+    }
+   };
+   const checkCells=async()=>assert(await evaluate("[...board.querySelectorAll('input')].every(c=>c.readOnly&&c.inputMode==='none'&&!c.disabled)"),'Playable cells must suppress native editing while remaining focusable');
+   let cases=0;
+   for(const [width,height]of [[390,844],[1366,900]])for(const level of Object.keys(engine.levels)){
+    const mobile=width<768;
+    await load(width,height);
+    await evaluate(`settings.soundEffects=false;settings.reducedMotion=true;applySettings();selectDifficulty('${level}')`);
+    await checkCells();
+    const {index,given,answer,size}=await evaluate('(()=>{const index=puzzle.findIndex(v=>!v);return{index,given:puzzle.findIndex(Boolean),answer:solution[index],size:gridConfig.size};})()');
+    const cell=`#board [data-index="${index}"]`;
+    await tap(`#board [data-index="${given}"]`,mobile);
+    assert(await evaluate(`selectedIndex===${given}&&board.children[${given}].classList.contains('selected')`),'Given cells remain selectable');
+    await tap(cell,mobile);
+    assert(await evaluate(`selectedIndex===${index}&&document.activeElement===board.children[${index}]&&board.children[${index}].classList.contains('selected')`),'Tap must focus and highlight the cell');
+    await send('Input.insertText',{text:'9'},sid);
+    assert(await evaluate(`values[${index}]===0&&board.children[${index}].value===''&&history.length===0`),'Native text insertion must not edit the cell');
+    await tap(`#number-pad [data-value="${answer}"]`,mobile);
+    assert(await evaluate(`values[${index}]===${answer}&&board.children[${index}].value==='${answer}'&&history.length===1&&board.children[${index}].classList.contains('selected')`),'Number pad must update the move, display, history and highlight');
+    await press('Backspace');
+    assert(await evaluate(`values[${index}]===0&&board.children[${index}].value===''`),'Physical Backspace must erase');
+    await press(String(answer));
+    assert(await evaluate(`values[${index}]===${answer}&&board.children[${index}].value==='${answer}'`),'Physical digit keys must enter a number');
+    await tap('#undo-button',mobile);await checkCells();
+    assert(await evaluate(`values[${index}]===0&&board.children[${index}].value===''&&selectedIndex===${index}`),'Undo must restore the previous value and selection');
+    await tap('#hint-button',mobile);
+    assert(await evaluate(`values[${index}]===${answer}&&hintsUsed===1`),'Hint must still fill the selected cell');
+    await tap('#erase-button',mobile);
+    assert(await evaluate(`values[${index}]===0&&board.children[${index}].value===''`),'Erase must still clear the selected cell');
+    await tap('#undo-button',mobile);
+    assert(await evaluate(`values[${index}]===${answer}`),'Erasing must remain undoable');
+    await press('0');
+    assert(await evaluate(`values[${index}]===0&&board.children[${index}].value===''`),'Physical zero must retain its erase behavior');
+    await press(String(answer),{code:'Numpad'+answer,isKeypad:true});
+    assert(await evaluate(`values[${index}]===${answer}&&board.children[${index}].value==='${answer}'`),'Physical number pad keys must enter a number');
+    await press('Delete');
+    assert(await evaluate(`values[${index}]===0&&board.children[${index}].value===''`),'Physical Delete must erase');
+    const before=await evaluate('JSON.stringify({values,history,mistakes})');
+    for(const key of ['x',...(size<9?[String(size+1)]:[])])await press(key);
+    for(const modifiers of [1,2,4])await press(String(answer),{modifiers,text:''});
+    assert.equal(await evaluate('JSON.stringify({values,history,mistakes})'),before,'Invalid digits and modified shortcuts must not enter moves');
+    await press(String(answer%size+1));
+    assert(await evaluate(`mistakes===1&&board.children[${index}].classList.contains('invalid')&&board.children[${index}].getAttribute('aria-invalid')==='true'`),'Keyboard moves must run gameplay validation');
+    await tap('#undo-button',mobile);
+    assert(await evaluate(`values[${index}]===0&&!board.children[${index}].classList.contains('invalid')`));
+    const navigation=await evaluate(`(()=>{const cases=[];for(const [key,step]of Object.entries({ArrowLeft:-1,ArrowRight:1,ArrowUp:-gridConfig.size,ArrowDown:gridConfig.size}))for(let from=0;from<puzzle.length;from++){if(puzzle[from])continue;let to=from+step;while(to>=0&&to<puzzle.length&&(Math.abs(step)!==1||Math.floor(to/gridConfig.size)===Math.floor(from/gridConfig.size))){if(!puzzle[to]){cases.push({key,from,to});break;}to+=step;}}return cases;})()`);
+    for(const {key,from,to}of navigation){
+     await evaluate(`board.children[${from}].focus()`);await press(key);
+     assert(await evaluate(`selectedIndex===${to}&&document.activeElement===board.children[${to}]&&board.children[${to}].classList.contains('selected')`),'Arrow keys must skip givens and retain highlighting');
+    }
+    await tap('#pause-button',mobile);
+    const pausedState=await evaluate('JSON.stringify({values,history,mistakes,hintsUsed})');
+    await evaluate("numberPad.querySelector('button').click();eraseButton.click();hintButton.click();undoButton.click()");await press(String(answer));
+    assert.equal(await evaluate('JSON.stringify({values,history,mistakes,hintsUsed})'),pausedState,'Paused games must reject input');
+    await tap('#pause-button',mobile);await checkCells();
+    await evaluate('returnHome();startGame()');await checkCells();
+    await evaluate('resetButton.click()');await checkCells();
+    assert(await evaluate('values.every((v,i)=>v===puzzle[i])&&history.length===0&&mistakes===0&&hintsUsed===0'),'Reset must preserve clean gameplay');
+    await tap(cell,mobile);
+    await evaluate(`values=solution.slice();values[${index}]=0;renderBoard();board.children[${index}].focus()`);
+    await press(String(answer));
+    assert(await evaluate("completed&&!!document.querySelector('#completion-dialog[open]')&&values.every((v,i)=>v===solution[i])"),'Keyboard entry must still complete the game');
+    console.log('PASS: '+level+' '+(mobile?'mobile touch':'desktop mouse')+' selection, native editing suppression, number pad, physical keyboard, controls, pause, reset and completion');cases++;
+   }
+   assert.equal(consoleErrors.length,0,JSON.stringify(consoleErrors));console.log(cases+' cell input scenarios passed.');
+   await send('Browser.close');socket.close();return;
+  }
   if(process.argv.includes('--navigation-only')) {
    const openNavigation=async()=>{await evaluate("document.querySelector('#menu-toggle').click()");await settleDrawers();};
    const clickNavigation=selector=>evaluate(`new Promise(resolve=>{const d=document.querySelector('#navigation-dialog');d.addEventListener('close',()=>resolve(),{once:true});d.querySelector('${selector}').click();})`);
