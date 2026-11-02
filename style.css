@@ -201,6 +201,13 @@ h1 em {
     pointer-events: none;
     user-select: none;
     transform: rotate(3deg);
+    animation: landing-preview-float 8s ease-in-out infinite;
+    animation-play-state: paused;
+}
+.landing-preview.preview-animating { animation-play-state: running; }
+@keyframes landing-preview-float {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -3px; }
 }
 
 .landing-board {
@@ -227,6 +234,16 @@ h1 em {
 .preview-cell.preview-given {
     color: #39262c;
     font-weight: 700;
+}
+.preview-cell.preview-entry { animation: landing-preview-number 4s ease-in-out both; }
+@keyframes landing-preview-number {
+    0%, 100% { color: transparent; background-color: transparent; }
+    25%, 65% { color: var(--burgundy); background-color: var(--blush); }
+}
+body.reduced-motion .landing-preview,
+body.reduced-motion .preview-cell.preview-entry { animation: none; translate: none; }
+@media (prefers-reduced-motion: reduce) {
+    .landing-preview, .preview-cell.preview-entry { animation: none; translate: none; }
 }
 
 .preview-cell.preview-box-right {
@@ -2013,7 +2030,8 @@ body.high-contrast #board {
     font-family: inherit;
     box-shadow: -6px 0 24px #35102010;
 }
-#navigation-dialog { height: auto; max-height: 100dvh; overflow-y: auto; padding: 16px; }
+#navigation-dialog { height: 100dvh; max-height: 100dvh; overflow: hidden; padding: 0; border-radius: 0; }
+#navigation-dialog[open] { display: flex; flex-direction: column; }
 :is(#settings-dialog, #information-dialog) { height: 100dvh; max-height: 100dvh; overflow: hidden; border-radius: 0; }
 :is(#settings-dialog, #information-dialog)[open] { display: flex; flex-direction: column; }
 #navigation-dialog[open], :is(#settings-dialog, #information-dialog)[open] { animation: drawer-slide-in 180ms ease-out; }
@@ -2024,6 +2042,7 @@ body.high-contrast #board {
 }
 .navigation-heading h2, :is(#settings-dialog, #information-dialog) .settings-heading h2 { margin: 0; font-size: 1.125rem; color: var(--burgundy); }
 .navigation-heading h2 { letter-spacing: .04em; }
+#navigation-dialog .navigation-heading { flex: none; padding: max(16px, env(safe-area-inset-top)) 16px 12px; }
 :is(#settings-dialog, #information-dialog) .settings-heading { position: relative; top: auto; flex: none; padding: max(16px, env(safe-area-inset-top)) 16px 16px; border-bottom: 1px solid var(--line); }
 :is(#settings-dialog, #information-dialog) .settings-content {
     flex: 1 1 auto; min-height: 0; height: auto; max-height: none;
@@ -2039,7 +2058,32 @@ body.high-contrast #board {
     padding: 10px; border: 0; border-radius: 8px; background: transparent; color: inherit;
 }
 #navigation-close svg, :is(#settings-dialog, #information-dialog) .settings-close svg { width: 22px; height: 22px; }
-#navigation-dialog nav { display: grid; gap: 4px; }
+#navigation-dialog nav {
+    display: grid;
+    align-content: start;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 4px;
+    padding: 0 16px 16px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+#navigation-dialog .navigation-footer {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: center;
+    flex: none;
+    gap: 12px;
+    width: 100%;
+    margin: 0;
+    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: var(--paper);
+}
+#navigation-dialog .navigation-footer strong { color: var(--burgundy); font-size: .95em; font-weight: 800; letter-spacing: .04em; }
+#navigation-dialog .navigation-footer p { min-width: 0; margin: 0; color: var(--muted); font-size: .6875em; line-height: 1.5; text-align: right; }
 #navigation-dialog nav a, #navigation-settings {
     display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px;
     padding: 12px; border: 0; border-radius: 8px; font: inherit; font-weight: 500;
@@ -2090,8 +2134,9 @@ body.reduced-motion #navigation-dialog[open], body.reduced-motion :is(#settings-
     body.is-playing .tool-button { height: 100%; }
 }
 
-/* Mistake-limit dialog only. */
-#game-over-dialog {
+/* Game Over and new-game confirmation share the same centered popup style. */
+#game-over-dialog,
+#replace-game-dialog {
     width: min(360px, calc(100% - 32px));
     max-height: calc(100dvh - 32px);
     margin: auto;
@@ -2105,19 +2150,28 @@ body.reduced-motion #navigation-dialog[open], body.reduced-motion :is(#settings-
     box-shadow: 0 12px 36px #35102020;
     font-family: inherit;
 }
-#game-over-dialog::backdrop { background: #25121b66; }
-#game-over-title { margin: 0; font-size: 1.5rem; font-weight: 700; color: #741B3D; }
+#game-over-dialog::backdrop,
+#replace-game-dialog::backdrop { background: #25121b66; }
+#game-over-title,
+#replace-game-title { margin: 0; font-size: 1.5rem; font-weight: 700; color: #741B3D; }
 .game-over-divider { height: 1px; margin: 20px 0; background: #E4CDD5; }
-#game-over-message { margin: 0 0 24px; font-size: 1rem; line-height: 1.6; }
-#game-over-restart { width: 100%; min-height: 48px; padding: 12px 16px; border: 0; border-radius: 8px; background: #741B3D; color: #fff; font: inherit; font-weight: 600; }
-html:has(#game-over-dialog[open]), body:has(#game-over-dialog[open]) { overflow: hidden; }
+#game-over-message,
+#replace-game-message { margin: 0 0 24px; font-size: 1rem; line-height: 1.6; }
+#game-over-restart,
+.replace-game-actions button { width: 100%; min-height: 48px; padding: 12px 16px; border: 0; border-radius: 8px; background: #741B3D; color: #fff; font: inherit; font-weight: 600; }
+.replace-game-actions { display: grid; gap: 12px; }
+#replace-game-continue { border: 1px solid var(--burgundy); background: transparent; color: var(--burgundy); }
+#replace-game-continue:hover { background: var(--blush); }
+html:has(:is(#game-over-dialog, #replace-game-dialog)[open]),
+body:has(:is(#game-over-dialog, #replace-game-dialog)[open]) { overflow: hidden; }
 
 /* Original CTA location: the stack inherits the former button's ordering. */
 .landing-actions {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    align-items: flex-start;
+    gap: clamp(8px, 1.2dvh, 12px);
+    align-items: stretch;
+    width: min(100%, 320px);
     order: 5;
     margin-top: 22px;
 }
@@ -2126,12 +2180,12 @@ html:has(#game-over-dialog[open]), body:has(#game-over-dialog[open]) { overflow:
     display: flex;
     align-items: center;
     justify-content: center;
-    width: min(100%, 300px);
+    width: 100%;
     min-height: 50px;
     margin: 0;
     padding: 14px 22px;
     border: 1px solid var(--burgundy);
-    border-radius: 28px;
+    border-radius: 999px;
     background: var(--burgundy);
     color: #fff;
     font-family: inherit;
@@ -2142,17 +2196,17 @@ html:has(#game-over-dialog[open]), body:has(#game-over-dialog[open]) { overflow:
 }
 /* Continue visibility already reflects resumable progress; keep navigation untouched. */
 .landing-actions #continue-button { background: #741B3D; border-color: #741B3D; color: #fff; }
-.landing-actions #start-button { background: #741B3D; border-color: #741B3D; color: #fff; }
-.landing-actions #continue-button:not([hidden]) ~ #start-button {
+.landing-actions #start-button {
     background: transparent;
     border: 1px solid #741B3D;
     color: #741B3D;
     box-shadow: none;
 }
+.landing-actions #start-button:hover { background: var(--blush); }
 .landing-actions #start-label { margin-left: 0; }
 @media (max-width: 640px) {
     .landing-actions {
-        width: min(100%, 300px);
+        width: min(100%, 320px);
         justify-self: center;
         align-self: center;
         align-items: stretch;
@@ -2163,7 +2217,110 @@ html:has(#game-over-dialog[open]), body:has(#game-over-dialog[open]) { overflow:
 /* Gameplay difficulty is a read-only text label. */
 #game-difficulty { cursor: default; background-image: none; }
 
-/* Desktop landing refinements; mobile and gameplay retain their existing rules. */
+/* The homepage's first screen includes the existing header. A minimum height
+   lets unusually small screens and enlarged text grow and scroll naturally. */
+body:not(.is-playing):not(.is-choosing) {
+    --home-header-height: 72px;
+    --landing-glow: #E4CDD5AA;
+    --landing-soft-glow: #F7EAEECC;
+    --landing-grid-size: clamp(28px, 3.5vw, 52px);
+    position: relative;
+    isolation: isolate;
+    background-image:
+        radial-gradient(ellipse 68% 60% at 84% 35%, var(--landing-glow), transparent 80%),
+        radial-gradient(ellipse 60% 35% at 18% 66%, var(--landing-soft-glow), transparent 90%),
+        radial-gradient(ellipse 38% 30% at 12% 15%, var(--landing-soft-glow), transparent 85%);
+    background-size: 100% 100dvh;
+    background-repeat: no-repeat;
+}
+:root[data-theme="dark"] body:not(.is-playing):not(.is-choosing),
+body.dark-mode:not(.is-playing):not(.is-choosing) {
+    --landing-glow: #741B3D64;
+    --landing-soft-glow: #38252F99;
+}
+body.larger-buttons:not(.is-playing):not(.is-choosing) { --home-header-height: 73px; }
+body:not(.is-playing):not(.is-choosing) .hero {
+    position: relative;
+    isolation: isolate;
+    min-height: calc(100vh - var(--home-header-height));
+    min-height: calc(100svh - var(--home-header-height));
+    min-height: calc(100dvh - var(--home-header-height));
+}
+/* Full-width puzzle texture fills the empty margins without changing layout. */
+body:not(.is-playing):not(.is-choosing)::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: var(--home-header-height);
+    height: calc(100dvh - var(--home-header-height));
+    z-index: -1;
+    pointer-events: none;
+    opacity: .11;
+    background-image:
+        linear-gradient(90deg, var(--burgundy) 1px, transparent 1px),
+        linear-gradient(var(--burgundy) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        linear-gradient(var(--line) 1px, transparent 1px);
+    background-size:
+        calc(var(--landing-grid-size) * 3) calc(var(--landing-grid-size) * 3),
+        calc(var(--landing-grid-size) * 3) calc(var(--landing-grid-size) * 3),
+        var(--landing-grid-size) var(--landing-grid-size),
+        var(--landing-grid-size) var(--landing-grid-size);
+    mask-image: radial-gradient(ellipse 100% 85% at 52% 44%, #000 10%, transparent 100%);
+}
+body:not(.is-playing):not(.is-choosing) .hero-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    gap: clamp(6px, 1dvh, 12px);
+    text-align: center;
+}
+body:not(.is-playing):not(.is-choosing) .hero-highlights {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: min(100%, 390px);
+    margin: 0;
+}
+body:not(.is-playing):not(.is-choosing) .hero-highlight {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: var(--burgundy);
+    font-size: .8125rem;
+    line-height: 1.3;
+    text-align: center;
+}
+body:not(.is-playing):not(.is-choosing) .highlight-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: var(--blush);
+    color: var(--burgundy);
+    font-size: 22px;
+    line-height: 1;
+}
+body:not(.is-playing):not(.is-choosing) .bars-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+body:not(.is-playing):not(.is-choosing) .bars-icon i {
+    width: 6px;
+    border-radius: 2px;
+    background: currentColor;
+}
+body:not(.is-playing):not(.is-choosing) .bars-icon i:nth-child(1) { height: 14px; }
+body:not(.is-playing):not(.is-choosing) .bars-icon i:nth-child(2) { height: 21px; }
+body:not(.is-playing):not(.is-choosing) .bars-icon i:nth-child(3) { height: 29px; }
+
+/* Desktop landing refinements; gameplay retains its existing rules. */
 @media (min-width: 769px) and (min-height: 501px), (min-width: 769px) and (pointer: fine), (min-width: 769px) and (pointer: none) {
     body:not(.is-playing):not(.is-choosing) .header {
         display: flex;
@@ -2183,32 +2340,42 @@ html:has(#game-over-dialog[open]), body:has(#game-over-dialog[open]) { overflow:
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         align-items: center;
-        gap: clamp(40px, 5vw, 72px);
-        padding: clamp(48px, 5vw, 72px) 0;
-        text-align: left;
+        gap: clamp(28px, 4vw, 56px);
+        padding: clamp(12px, 2dvh, 32px) 0;
+        text-align: center;
     }
-    body:not(.is-playing):not(.is-choosing) .hero-copy { display: block; min-width: 0; }
+    body:not(.is-playing):not(.is-choosing) .hero-copy {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        min-height: min(70dvh, 760px);
+        gap: clamp(8px, 1.5dvh, 20px);
+        min-width: 0;
+    }
+    body:not(.is-playing):not(.is-choosing) .hero-copy .eyebrow { margin: 0; }
     body:not(.is-playing):not(.is-choosing) .hero-copy h1 {
         font-family: Inter, sans-serif;
         font-weight: 800;
-        font-size: clamp(54px, 5.6vw, 80px);
+        font-size: clamp(48px, min(5.8vw, 10dvh), 84px);
         line-height: 1.08;
         letter-spacing: -.04em;
-        margin: 12px 0 20px;
+        margin: 0;
         color: var(--burgundy);
     }
     body:not(.is-playing):not(.is-choosing) .hero-copy .intro {
-        max-width: 390px;
-        margin: 0 0 24px;
+        max-width: 430px;
+        margin: 0;
         font-family: Inter, sans-serif;
         font-size: 1.125rem;
-        line-height: 1.7;
+        line-height: 1.5;
     }
-    body:not(.is-playing):not(.is-choosing) .landing-actions { margin-top: 24px; }
-    body:not(.is-playing):not(.is-choosing) .small-note { margin-top: 16px; line-height: 1.6; }
+    body:not(.is-playing):not(.is-choosing) .landing-actions { margin: 0; order: initial; }
+    body:not(.is-playing):not(.is-choosing) .small-note { margin: 0; line-height: 1.6; }
     body:not(.is-playing):not(.is-choosing) .landing-preview {
         grid-column: 2; grid-row: 1;
-        width: min(100%, 420px);
+        width: min(96%, 520px, 70dvh);
+        max-width: 520px;
         margin: 0 auto;
         align-self: center;
         transform: rotate(3deg);
@@ -2323,15 +2490,48 @@ body.is-playing #number-pad { grid-template-columns: repeat(var(--key-count,9),m
 }
 
 /* Shared difficulty-card alignment for all viewports and translations. */
+body.is-choosing { --difficulty-header-height: 72px; }
+body.is-choosing.larger-buttons { --difficulty-header-height: 73px; }
+body.is-choosing .difficulty-screen {
+    display: grid;
+    align-items: center;
+    min-height: calc(100svh - var(--difficulty-header-height));
+    min-height: calc(100dvh - var(--difficulty-header-height));
+    padding: clamp(12px, 3dvh, 32px) 0;
+}
+body.is-choosing .difficulty-window { min-height: 0; overflow: visible; }
+body.is-choosing .difficulty-content { padding: 0; }
+body.is-choosing #difficulty-title {
+    color: var(--burgundy);
+    font-size: clamp(2rem, min(4.5vw, 8dvh), 3.75rem);
+    line-height: 1.2;
+    letter-spacing: -.03em;
+}
+body.is-choosing .difficulty-intro {
+    margin: clamp(6px, 1.2dvh, 12px) 0 clamp(12px, 2dvh, 24px);
+    font-size: clamp(1rem, 2.6dvh, 1.25rem);
+    line-height: 1.4;
+}
+#difficulty-screen .difficulty-options { grid-auto-rows: 1fr; }
 #difficulty-screen .difficulty-option {
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    min-height: clamp(220px, 42dvh, 340px);
+    padding: clamp(12px, 2dvh, 24px);
+    gap: clamp(6px, 1.2dvh, 12px);
     text-align: center;
 }
-#difficulty-screen .difficulty-option .difficulty-icon { align-self: center; }
+#difficulty-screen .difficulty-option .difficulty-icon {
+    align-self: center;
+    height: clamp(32px, 7dvh, 64px);
+}
+#difficulty-screen .difficulty-icon i:nth-child(1) { height: 45%; }
+#difficulty-screen .difficulty-icon i:nth-child(2) { height: 70%; }
+#difficulty-screen .difficulty-icon i:nth-child(3) { height: 100%; }
 #difficulty-screen .difficulty-option h2 {
     margin: 0;
+    font-size: clamp(1.125rem, 2.8dvh, 1.5rem);
+    line-height: 1.2;
     text-align: center;
 }
 #difficulty-screen .difficulty-option p {
@@ -2342,15 +2542,21 @@ body.is-playing #number-pad { grid-template-columns: repeat(var(--key-count,9),m
     max-width: 240px;
     min-height: 0;
     margin: 0;
-    line-height: 1.6;
+    font-size: clamp(.875rem, 1.9dvh, 1rem);
+    line-height: 1.4;
     text-align: center;
 }
 #difficulty-screen .difficulty-option .level-button {
     align-self: center;
     justify-content: center;
+    min-height: 44px;
     margin-top: 0;
+    padding: 10px 18px;
+    font-size: 1rem;
+    line-height: 1.25;
     text-align: center;
 }
+body.is-choosing.larger-buttons #difficulty-screen .level-button { min-height: 48px; }
 
 /* Native modal is the win-effects layer: backdrop -> confetti -> completion card. */
 #completion-dialog {
@@ -2452,7 +2658,7 @@ body.dark-mode {
     background: var(--paper);
     color: var(--ink);
 }
-body.dark-mode :is(.landing-preview, .puzzle-card, .difficulty-option, .completion-card, #game-over-dialog) {
+body.dark-mode :is(.landing-preview, .puzzle-card, .difficulty-option, .completion-card, #game-over-dialog, #replace-game-dialog) {
     background: var(--white);
     color: var(--ink);
     border-color: var(--line);
@@ -2462,7 +2668,7 @@ body.dark-mode :is(.difficulty-window, .difficulty-screen, .game-area, .landing-
     background-color: var(--paper);
     color: var(--ink);
 }
-body.dark-mode :is(.hero-copy h1, .hero-highlight, .difficulty-option h2, .difficulty-intro, .settings-section h3, .completion-card h2, #game-over-title) {
+body.dark-mode :is(.hero-copy h1, .hero-highlight, .difficulty-option h2, .difficulty-intro, .settings-section h3, .completion-card h2, #game-over-title, #replace-game-title) {
     color: var(--burgundy);
 }
 body.dark-mode :is(.intro, .small-note, .difficulty-option p, .setting-copy p, #settings-save-status, #completion-message) {
@@ -2474,7 +2680,7 @@ body.dark-mode :is(.highlight-icon, .game-tips, .completion-trophy, .completion-
     background: var(--blush);
     color: var(--burgundy);
 }
-body.dark-mode :is(.completion-stats dt, #game-over-message) { color: var(--ink); }
+body.dark-mode :is(.completion-stats dt, #game-over-message, #replace-game-message) { color: var(--ink); }
 body.dark-mode .completion-stats dd { color: var(--burgundy); }
 body.dark-mode .game-over-divider { background: var(--line); }
 body.dark-mode .preview-cell { color: var(--dark); }
@@ -2483,20 +2689,20 @@ body.dark-mode .difficulty-icon i { background: var(--line); }
 body.dark-mode .difficulty-option:nth-child(1) .difficulty-icon i:first-child,
 body.dark-mode .difficulty-option:nth-child(2) .difficulty-icon i:nth-child(-n+2),
 body.dark-mode .difficulty-option:nth-child(3) .difficulty-icon i { background: var(--burgundy); }
-body.dark-mode :is(.button, .level-button, .settings-done, .completion-play-again, #game-over-restart),
+body.dark-mode :is(.button, .level-button, .settings-done, .completion-play-again, #game-over-restart, #replace-game-start),
 body.dark-mode .landing-actions #continue-button,
 body.dark-mode .landing-actions #start-button {
     background: #741B3D;
     border-color: #B85E82;
     color: #FFFFFF;
 }
-body.dark-mode .landing-actions #continue-button:not([hidden]) ~ #start-button {
+body.dark-mode .landing-actions #start-button {
     background: transparent;
     border-color: var(--burgundy);
     color: var(--burgundy);
 }
-body.dark-mode :is(.button, .level-button, .settings-done, .completion-play-again, #game-over-restart):hover { background: #8A2950; }
-body.dark-mode .landing-actions #continue-button:not([hidden]) ~ #start-button:hover { background: var(--blush); }
+body.dark-mode :is(.button, .level-button, .settings-done, .completion-play-again, #game-over-restart, #replace-game-start):hover { background: #8A2950; }
+body.dark-mode .landing-actions #start-button:hover { background: var(--blush); }
 body.dark-mode :is(.nav-settings:hover, .tool-button:not(:disabled):hover, #number-pad button:hover, #language-select option:checked) {
     background: var(--blush);
     color: var(--burgundy);
@@ -2519,13 +2725,28 @@ body.dark-mode #board .cell.matching { background: var(--dark-matching)!importan
 body.dark-mode #board .cell.selected { background: var(--dark-selected)!important; outline-color: var(--burgundy); }
 body.dark-mode #board .cell.invalid { color: var(--dark-error)!important; -webkit-text-fill-color: var(--dark-error); }
 body.dark-mode #completion-dialog { color: var(--ink); }
-body.dark-mode :is(#completion-dialog, #game-over-dialog, #navigation-dialog, #settings-dialog, #information-dialog)::backdrop {
+body.dark-mode :is(#completion-dialog, #game-over-dialog, #replace-game-dialog, #navigation-dialog, #settings-dialog, #information-dialog)::backdrop {
     background: #00000088;
 }
 
-/* Close only the gap left by the removed How to Play eyebrow. */
-#how-to > h2:first-child,
-#information-dialog .how-to > h2:first-child { margin-top: 0; }
+/* Close only the gap left above the existing How to Play subheading. */
+#how-to > h2:not(.homepage-section-title),
+#information-dialog .how-to > h2:not(.homepage-section-title) { margin-top: 0; }
+
+/* Homepage section titles share the existing translated navigation labels. */
+main > :is(#features, #how-to) > .homepage-section-title {
+    margin: 0;
+    color: var(--burgundy);
+    font: 700 clamp(1.125rem, 2vw, 1.375rem)/1.4 Inter, sans-serif;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    text-align: center;
+}
+main > #features { row-gap: clamp(24px, 3vw, 36px); }
+main > #features > .homepage-section-title { grid-column: 1 / -1; }
+main > #how-to > .homepage-section-title { margin-bottom: 24px; }
+/* Information drawers already have their own titles. */
+#information-dialog .homepage-section-title { display: none; }
 
 /* Identical outline gear in every Settings control; button behavior is unchanged. */
 :is(#landing-settings, #settings-button, #difficulty-settings, #navigation-settings) > .settings-icon {
@@ -2557,32 +2778,32 @@ body.dark-mode :is(#completion-dialog, #game-over-dialog, #navigation-dialog, #s
     body .header, body.is-playing .header, body.is-choosing .header {
         padding-inline: var(--page-gutter);
     }
+    body:not(.is-playing):not(.is-choosing) { --home-header-height: 61px; }
+    body.larger-buttons:not(.is-playing):not(.is-choosing) { --home-header-height: 65px; }
     /* Keep the original title -> copy -> benefits -> board -> buttons sequence. */
     body:not(.is-playing):not(.is-choosing) .hero {
-        --preview-reserve: 450px;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: repeat(5, auto);
-        min-height: 0;
-        gap: clamp(8px, 1.5svh, 16px);
-        padding: clamp(12px, 2svh, 24px) 0;
+        grid-template-rows: auto auto minmax(88px, min(88vw, 480px)) auto;
+        height: calc(100dvh - var(--home-header-height));
+        min-height: min-content;
+        align-content: space-between;
+        gap: clamp(10px, 2dvh, 20px);
+        padding: clamp(8px, 1.5dvh, 16px) 0;
         text-align: center;
     }
-    body:not(.is-playing):not(.is-choosing) .hero:has(#continue-button:not([hidden])) {
-        --preview-reserve: 500px;
-    }
     body:not(.is-playing):not(.is-choosing) .hero-copy { display: contents; }
+    body:not(.is-playing):not(.is-choosing) .hero-heading { grid-area: 1 / 1; }
     body:not(.is-playing):not(.is-choosing) .hero-copy :is(.eyebrow, .small-note) { display: none; }
     body:not(.is-playing):not(.is-choosing) .hero h1 {
-        grid-area: 1 / 1;
         margin: 0;
         font-family: Inter, sans-serif;
-        font-size: clamp(2rem, 8vw, 3rem);
+        font-size: clamp(2.5rem, min(10vw, 7dvh), 3.5rem);
         font-weight: 800;
+        color: var(--burgundy);
         line-height: 1.1;
     }
     body:not(.is-playing):not(.is-choosing) .hero .intro {
-        grid-area: 2 / 1;
         width: 100%;
         max-width: 30rem;
         margin: 0 auto;
@@ -2590,7 +2811,7 @@ body.dark-mode :is(#completion-dialog, #game-over-dialog, #navigation-dialog, #s
         line-height: 1.45;
     }
     body:not(.is-playing):not(.is-choosing) .hero-highlights {
-        grid-area: 3 / 1;
+        grid-area: 2 / 1;
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 8px;
@@ -2606,42 +2827,57 @@ body.dark-mode :is(#completion-dialog, #game-over-dialog, #navigation-dialog, #s
         line-height: 1.3;
     }
     body:not(.is-playing):not(.is-choosing) .highlight-icon {
-        width: clamp(28px, 5svh, 38px);
-        height: clamp(28px, 5svh, 38px);
+        width: clamp(28px, 5dvh, 38px);
+        height: clamp(28px, 5dvh, 38px);
         font-size: 22px;
     }
     body:not(.is-playing):not(.is-choosing) .landing-preview {
-        grid-area: 4 / 1;
-        width: min(56vw, clamp(88px, calc(100svh - var(--preview-reserve)), 240px));
+        grid-area: 3 / 1;
+        width: auto;
+        height: 100%;
+        aspect-ratio: 1;
+        max-width: 100%;
         margin: 0 auto;
         padding: clamp(7px, 1.5vw, 11px);
     }
+    body:not(.is-playing):not(.is-choosing) .landing-board { height: 100%; }
     body:not(.is-playing):not(.is-choosing) .landing-actions {
-        grid-area: 5 / 1;
+        grid-area: 4 / 1;
         justify-self: center;
         align-items: stretch;
-        width: min(100%, 300px);
+        width: min(100%, 320px);
         margin: 0 auto;
-        gap: 10px;
+        gap: clamp(8px, 1.2dvh, 12px);
     }
-    .landing-actions :is(#start-button, #continue-button) { min-height: 48px; }
+    body:not(.is-playing):not(.is-choosing) .landing-actions :is(#start-button, #continue-button) {
+        min-height: 48px;
+        padding: 12px 20px;
+    }
     body.larger-text:not(.is-playing):not(.is-choosing) .hero .intro,
     body.larger-text .landing-actions .button { font-size: 1em; }
-    body.is-choosing .difficulty-screen { min-height: 0; padding: 24px 0; }
+    body.is-choosing { --difficulty-header-height: 61px; }
+    body.is-choosing.larger-buttons { --difficulty-header-height: 65px; }
+    body.is-choosing .difficulty-screen {
+        --difficulty-page-padding: clamp(8px, 1.5dvh, 20px);
+        padding: var(--difficulty-page-padding) 0;
+    }
     body.is-choosing .difficulty-window { min-height: 0; overflow: visible; }
     body.is-choosing .difficulty-content { width: 100%; margin: 0 auto; padding: 0; }
-    body.is-choosing #difficulty-title { font-family: Inter, sans-serif; font-size: clamp(1.75rem, 6vw, 2.5rem); line-height: 1.2; }
-    body.is-choosing .difficulty-intro { margin: 10px 0 20px; font-size: 1rem; line-height: 1.5; }
-    #difficulty-screen .difficulty-options { gap: 16px; }
-    #difficulty-screen .difficulty-option { min-height: 0; padding: 20px; gap: 12px; }
-    #difficulty-screen .difficulty-icon { height: 56px; transform: none; gap: 6px; }
-    #difficulty-screen .difficulty-icon i { width: 14px; }
-    #difficulty-screen .difficulty-icon i:nth-child(1) { height: 24px; }
-    #difficulty-screen .difficulty-icon i:nth-child(2) { height: 38px; }
-    #difficulty-screen .difficulty-icon i:nth-child(3) { height: 52px; }
-    #difficulty-screen .difficulty-option h2 { font-size: 1.25rem; }
-    #difficulty-screen .difficulty-option p { font-size: .875rem; }
-    #difficulty-screen .level-button { max-width: 100%; min-height: 44px; font-size: .95rem; }
+    body.is-choosing #difficulty-title { font-family: Inter, sans-serif; font-size: clamp(1.375rem, min(6vw, 4dvh), 2rem); }
+    body.is-choosing .difficulty-intro { margin: 6px 0 12px; font-size: clamp(.8125rem, 3vw, 1rem); }
+    #difficulty-screen .difficulty-options { gap: clamp(6px, 1dvh, 12px); }
+    #difficulty-screen .difficulty-option {
+        min-height: 0;
+        justify-content: space-evenly;
+        padding: clamp(6px, 1dvh, 12px);
+        gap: clamp(2px, .45dvh, 6px);
+    }
+    #difficulty-screen .difficulty-option > * { flex-shrink: 0; }
+    #difficulty-screen .difficulty-option .difficulty-icon { height: clamp(18px, calc(5dvh - 10px), 40px); transform: none; gap: 4px; }
+    #difficulty-screen .difficulty-icon i { width: clamp(8px, 2vw, 12px); }
+    #difficulty-screen .difficulty-option h2 { font-size: clamp(1rem, 3.6vw, 1.25rem); }
+    #difficulty-screen .difficulty-option p { flex: none; max-width: none; font-size: clamp(.75rem, 2.8vw, .875rem); line-height: 1.3; }
+    #difficulty-screen .difficulty-option .level-button { max-width: 100%; padding: 8px 16px; font-size: .875rem; }
     body.is-playing .timer-controls { display: flex; flex-wrap: nowrap; align-items: center; justify-self: end; grid-area: 1 / 2; gap: 8px; }
     body.is-playing .game-difficulty { height: auto; white-space: normal; line-height: 1.3; }
     body.is-playing .game-tools > button { min-width: 0; }
@@ -2655,8 +2891,24 @@ body.dark-mode :is(#completion-dialog, #game-over-dialog, #navigation-dialog, #s
     :is(#settings-dialog, #information-dialog) .settings-content { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
     #information-dialog .how-to h2 { font-size: clamp(1.5rem, 7vw, 2rem); }
     #navigation-dialog { max-height: 100dvh; overscroll-behavior: contain; }
-    #game-over-dialog { padding: 24px 20px; }
+    #game-over-dialog, #replace-game-dialog { padding: 24px 20px; }
     .completion-stats > div { gap: 10px; }
+}
+
+/* Stacked phone cards share the remaining viewport height, and grow together
+   when a very small screen or enlarged controls need natural page scrolling. */
+@media (max-width: 600px) and (orientation: portrait) {
+    body.is-choosing .difficulty-content {
+        display: flex;
+        flex-direction: column;
+        min-height: calc(100dvh - var(--difficulty-header-height) - var(--difficulty-page-padding) - var(--difficulty-page-padding));
+        gap: clamp(4px, .8dvh, 8px);
+    }
+    body.is-choosing .difficulty-intro { margin: 0; }
+    #difficulty-screen .difficulty-options { flex: 1; grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 768px) and (orientation: landscape) {
+    #difficulty-screen .difficulty-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* Short landscape screens retain readable controls and natural page scrolling. */
@@ -2664,13 +2916,15 @@ body.dark-mode :is(#completion-dialog, #game-over-dialog, #navigation-dialog, #s
     body:not(.is-playing):not(.is-choosing) .hero {
         grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
         grid-template-rows: auto auto auto;
+        height: auto;
+        min-height: calc(100dvh - var(--home-header-height));
+        align-content: space-evenly;
         column-gap: 24px;
-        row-gap: 10px;
+        row-gap: clamp(6px, 1.5dvh, 10px);
     }
-    body:not(.is-playing):not(.is-choosing) .hero h1 { grid-area: 1 / 1; }
-    body:not(.is-playing):not(.is-choosing) .hero .intro { grid-area: 2 / 1; }
+    body:not(.is-playing):not(.is-choosing) .hero-heading { grid-area: 1 / 1 / 3 / 2; }
     body:not(.is-playing):not(.is-choosing) .landing-actions { grid-area: 3 / 1; }
-    body:not(.is-playing):not(.is-choosing) .landing-preview { grid-area: 1 / 2 / 3 / 3; width: min(100%, 38svh); }
+    body:not(.is-playing):not(.is-choosing) .landing-preview { grid-area: 1 / 2 / 3 / 3; width: min(90%, 44dvh); height: auto; }
     body:not(.is-playing):not(.is-choosing) .hero-highlights { grid-area: 3 / 2; }
     body.is-playing .puzzle-card { width: min(360px, 100%); }
 }
