@@ -705,7 +705,9 @@ function renderBoard() {
 
         if (editable) {
             cell.type = "text";
-            cell.inputMode = "numeric";
+            // Keep focus and selection without opening the native mobile keyboard.
+            cell.readOnly = true;
+            cell.inputMode = "none";
             cell.maxLength = 1;
             cell.autocomplete = "off";
             cell.spellcheck = false;
@@ -726,14 +728,17 @@ function renderBoard() {
                 updateSelection();
             });
 
-            cell.addEventListener("input", () => {
-                const typed = Number(cell.value.slice(-1));
-                const nextValue = Number.isInteger(typed) && typed >= 1 && typed <= size ? typed : 0;
-                cell.value = nextValue || "";
-                setCellValue(index, nextValue);
-            });
-
             cell.addEventListener("keydown", event => {
+                if (!playing || completed || paused || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+
+                const digit = /^[0-9]$/.test(event.key) ? Number(event.key) : null;
+                if ((digit !== null && digit <= size) || event.key === "Backspace" || event.key === "Delete") {
+                    event.preventDefault();
+                    setCellValue(index, digit ?? 0);
+                    cell.value = values[index] || "";
+                    return;
+                }
+
                 const offsets = {
                     ArrowLeft: -1,
                     ArrowRight: 1,
