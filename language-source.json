@@ -111,6 +111,8 @@
   "hintsUsed": "Hints used",
   "playAgain": "Play Again",
   "replaceGame": "Replace your unfinished game with a new puzzle?",
+  "startNewGame": "Start New Game",
+  "continueGame": "Continue Game",
   "rule1": "Fill empty Sudoku cells using numbers 1–9.",
   "rule2": "Each row must contain 1–9 without repetition.",
   "rule3": "Each column must contain 1–9 without repetition.",

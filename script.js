@@ -460,6 +460,8 @@ const solution = [
     "345286179"
 ].join("").split("").map(Number);
 
+// The decorative board keeps its original solution when gameplay changes grids.
+const landingPreviewSolution = Object.freeze(solution.slice());
 const board = document.querySelector("#board");
 const landingPreview = document.querySelector("#landing-board");
 const startButton = document.querySelector("#start-button");
@@ -788,6 +790,8 @@ function renderLandingPreview() {
         if (value) {
             cell.textContent = value;
             cell.classList.add("preview-given");
+        } else {
+            cell.dataset.previewValue = String(landingPreviewSolution[index]);
         }
         if (index % 9 === 2 || index % 9 === 5) cell.classList.add("preview-box-right");
         if (Math.floor(index / 9) === 2 || Math.floor(index / 9) === 5) {
@@ -795,6 +799,57 @@ function renderLandingPreview() {
         }
         landingPreview.append(cell);
     });
+}
+
+function initializeLandingPreviewAnimation() {
+    const illustration = document.querySelector('#landing-preview');
+    const cells = [...landingPreview.children].filter(cell => cell.dataset.previewValue);
+    const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
+    let inViewport = false;
+    let running = false;
+    let timer;
+    let activeCell;
+    let nextCell = 0;
+
+    function clearEntry() {
+        if (!activeCell) return;
+        activeCell.textContent = '';
+        activeCell.classList.remove('preview-entry');
+        activeCell = null;
+    }
+    function revealNumber() {
+        activeCell = cells[nextCell++ % cells.length];
+        activeCell.textContent = activeCell.dataset.previewValue;
+        activeCell.classList.add('preview-entry');
+        timer = window.setTimeout(() => {
+            clearEntry();
+            if (running) timer = window.setTimeout(revealNumber, 6000);
+        }, 4000);
+    }
+    function stop() {
+        running = false;
+        window.clearTimeout(timer);
+        clearEntry();
+        illustration.classList.remove('preview-animating');
+    }
+    function synchronize() {
+        const enabled = inViewport && !document.hidden && !settings.reducedMotion && !motionPreference.matches &&
+            !document.body.matches('.is-playing, .is-choosing');
+        if (enabled === running) return;
+        if (!enabled) { stop(); return; }
+        running = true;
+        illustration.classList.add('preview-animating');
+        timer = window.setTimeout(revealNumber, 6000);
+    }
+    new IntersectionObserver(([entry]) => {
+        inViewport = entry.isIntersecting;
+        synchronize();
+    }).observe(illustration);
+    new MutationObserver(synchronize).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('visibilitychange', synchronize);
+    motionPreference.addEventListener('change', synchronize);
+    window.addEventListener('pagehide', stop);
+    window.addEventListener('pageshow', synchronize);
 }
 
 function updateSelection() {
@@ -1137,7 +1192,47 @@ function leaveDifficultyFor(section) {
 }
 
 function selectDifficulty(level) {
-    if (playing && !completed && !window.confirm(translate('replaceGame'))) return;
+    if (playing && !completed && !mistakeLimitEnded) {
+        showReplaceGameConfirmation(level);
+        return;
+    }
+    startNewPuzzle(level);
+}
+
+function showReplaceGameConfirmation(level) {
+    if (document.querySelector('#replace-game-dialog')) return;
+    const opener = document.activeElement;
+    const resumeTimer = document.body.classList.contains('is-playing') && playing && !completed && !paused;
+    if (resumeTimer) window.clearInterval(timerInterval);
+    const dialog = document.createElement('dialog');
+    dialog.id = 'replace-game-dialog';
+    dialog.setAttribute('aria-labelledby', 'replace-game-title');
+    dialog.setAttribute('aria-describedby', 'replace-game-message');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.innerHTML = '<h2 id="replace-game-title" data-i18n="startNewGame"></h2><div class="game-over-divider" aria-hidden="true"></div><p id="replace-game-message" data-i18n="replaceGame"></p><div class="replace-game-actions"><button type="button" id="replace-game-continue" data-i18n="continueGame"></button><button type="button" id="replace-game-start" data-i18n="startNewGame"></button></div>';
+    dialog.querySelectorAll('[data-i18n]').forEach(element => {
+        element.textContent = translate(element.dataset.i18n);
+    });
+    dialog.querySelector('#replace-game-continue').addEventListener('click', () => dialog.close('continue'));
+    dialog.querySelector('#replace-game-start').addEventListener('click', () => dialog.close('replace'));
+    dialog.addEventListener('close', () => {
+        dialog.remove();
+        if (dialog.returnValue === 'replace') {
+            startNewPuzzle(level);
+        } else if (dialog.returnValue === 'continue') {
+            document.body.classList.remove('is-choosing');
+            startGame();
+        } else {
+            if (resumeTimer && playing && !completed && !paused && document.body.classList.contains('is-playing')) startTimer();
+            if (opener?.isConnected) opener.focus({ preventScroll: true });
+        }
+    }, { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+    dialog.querySelector('#replace-game-continue').focus();
+}
+
+function startNewPuzzle(level) {
     hintsUsed = 0;
     selectedDifficulty = level;
     const generated = SudokuEngine.generate(level);
@@ -1329,6 +1424,7 @@ renderLandingPreview();
 renderBoard();
 applyLanguage(settings.language);
 applySettings();
+initializeLandingPreviewAnimation();
 // One native modal serves every screen and traps keyboard focus.
 const menuToggle = document.querySelector('#menu-toggle');
 const navigationDialog = document.querySelector('#navigation-dialog');
